@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useCountdownHistory } from './hooks/useCountdownHistory';
+import HistoryButton from './components/HistoryButton';
+import HistoryModal from './components/HistoryModal';
 
 export default function Home() {
   const [hours, setHours] = useState(0);
@@ -10,6 +13,15 @@ export default function Home() {
   const [isRunning, setIsRunning] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+
+  const {
+    records,
+    recordStart,
+    recordEnd,
+    deleteRecord,
+    clearHistory
+  } = useCountdownHistory();
 
   useEffect(() => {
     if (darkMode) {
@@ -28,6 +40,7 @@ export default function Home() {
           if (prev <= 1) {
             setIsRunning(false);
             setIsFinished(true);
+            recordEnd('completed', 0);
             return 0;
           }
           return prev - 1;
@@ -36,7 +49,7 @@ export default function Home() {
     }
 
     return () => clearInterval(interval);
-  }, [isRunning, timeLeft]);
+  }, [isRunning, timeLeft, recordEnd]);
 
   const startCountdown = () => {
     const totalSeconds = hours * 3600 + minutes * 60 + seconds;
@@ -44,6 +57,7 @@ export default function Home() {
       setTimeLeft(totalSeconds);
       setIsRunning(true);
       setIsFinished(false);
+      recordStart({ hours, minutes, seconds });
     }
   };
 
@@ -52,6 +66,9 @@ export default function Home() {
   };
 
   const resetCountdown = () => {
+    if (timeLeft > 0) {
+      recordEnd('cancelled', timeLeft);
+    }
     setIsRunning(false);
     setTimeLeft(0);
     setIsFinished(false);
@@ -90,8 +107,13 @@ export default function Home() {
       </div>
 
       <div className="container mx-auto px-4 py-8 relative z-10">
-        {/* Dark Mode Toggle */}
-        <div className="flex justify-end mb-4 md:mb-8">
+        {/* Dark Mode Toggle & History Button */}
+        <div className="flex justify-end gap-3 mb-4 md:mb-8">
+          <HistoryButton
+            recordCount={records.length}
+            onClick={() => setShowHistory(true)}
+            darkMode={darkMode}
+          />
           <button
             onClick={() => setDarkMode(!darkMode)}
             className={`p-2.5 sm:p-3 rounded-full transition-all duration-300 transform hover:scale-110 ${
@@ -243,6 +265,16 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* History Modal */}
+      <HistoryModal
+        isOpen={showHistory}
+        onClose={() => setShowHistory(false)}
+        records={records}
+        onDeleteRecord={deleteRecord}
+        onClearHistory={clearHistory}
+        darkMode={darkMode}
+      />
     </div>
   );
 }
